@@ -54,6 +54,12 @@ resource "aws_s3_bucket" "devuserbucket" {
 
 provider "azurerm" {
   features {}
+  
+  client_id       = azure_client_id
+  client_secret   = azure_client_secret
+  tenant_id       = azure_tenant_id
+  subscription_id = azure_subscription_id
+
 }
 #
 resource "azurerm_resource_group" "devops_rg" {
