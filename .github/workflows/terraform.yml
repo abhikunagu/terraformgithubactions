@@ -1,4 +1,4 @@
-name: Terraform EC2 Deployment
+name: Terraform multi cloud resourse deployment
 
 on:
   push:
