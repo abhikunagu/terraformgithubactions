@@ -19,7 +19,7 @@ resource "aws_vpc" "this" {
 resource "aws_instance" "devops_server" {
   ami           = "ami-04b4f1a9cf54c11d0"
   instance_type = "t2.micro"
-  count         = 10
+  count         = 1
 
   tags = {
     Name = "DEVOPS"
