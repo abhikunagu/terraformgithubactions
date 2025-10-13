@@ -30,13 +30,13 @@ jobs:
           terraform_version: 1.9.0
 
       - name: Terraform Init
-        run: terraform -chdir=terraform-ec2 init
+        run: terraform init
 
       - name: Terraform Validate
-        run: terraform -chdir=terraform-ec2 validate
+        run: terraform validate
 
       - name: Terraform Plan
-        run: terraform -chdir=terraform-ec2 plan -out=tfplan
+        run: terraform plan -out=tfplan
 
       - name: Terraform Apply
-        run: terraform -chdir=terraform-ec2 apply -auto-approve
+        run: terraform apply -auto-approve
