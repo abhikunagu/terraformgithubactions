@@ -33,7 +33,7 @@ resource "aws_instance" "devops_server" {
 
 # AWS ECR Repository
 resource "aws_ecr_repository" "devops_ecr" {
-  name                 = "devops-ecr-repo"
+  name                 = "devops-ecr-repo1"
   image_tag_mutability = "MUTABLE"
   tags = {
     Environment = "DevOps"
@@ -42,7 +42,7 @@ resource "aws_ecr_repository" "devops_ecr" {
 
 # AWS S3 Bucket
 resource "aws_s3_bucket" "devuserbucket" {
-  bucket = "my-tf-test-bucketnewone"
+  bucket = "my-tf-test-bucketnewone1"
 
   tags = {
     Name        = "My bucket"
