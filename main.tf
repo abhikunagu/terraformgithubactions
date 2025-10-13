@@ -25,3 +25,22 @@ resource "aws_instance" "devops_server" {
     Name = "DEVOPS"
   }
 }
+
+# AWS ECR Repository
+resource "aws_ecr_repository" "devops_ecr" {
+  name                 = "devops-ecr-repo"
+  image_tag_mutability = "MUTABLE"
+  tags = {
+    Environment = "DevOps"
+  }
+}
+
+# AWS S3 Bucket
+resource "aws_s3_bucket" "devuserbucket" {
+  bucket = "my-tf-test-bucketnewone"
+
+  tags = {
+    Name        = "My bucket"
+    Environment = "Dev"
+  }
+}
