@@ -77,7 +77,7 @@ resource "azurerm_subnet" "devops_subnet" {
   name                 = "devops-subnet"
   resource_group_name  = azurerm_resource_group.devops_rg.name
   virtual_network_name = azurerm_virtual_network.devops_vnet.name
-  address_prefixes     = ["10.0.1.0/24"]
+  address_prefixes     = ["10.1.1.0/24"]
 }
 
 # Network Interface
