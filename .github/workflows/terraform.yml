@@ -8,7 +8,7 @@ on:
 
 jobs:
   terraform:
-    name: Deploy EC2 using Terraform
+    name: Deploy multi cloud resourse using Terraform
     runs-on: ubuntu-latest
 
     permissions:
