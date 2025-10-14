@@ -18,7 +18,7 @@ provider "aws" {
 }
 
 resource "aws_vpc" "this" {
- cidr_block = "10.30.0.0/16"
+ cidr_block = "10.31.0.0/16"
 }
 
 resource "aws_instance" "devops_server" {
