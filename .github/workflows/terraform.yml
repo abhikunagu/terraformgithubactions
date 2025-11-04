@@ -11,57 +11,11 @@ jobs:
     name: Deploy multi cloud resources using terraform
     runs-on: ubuntu-latest
 
-    # required for OIDC-based authentication or future extensions
+    # Required for OIDC-based authentication or future extensions
     permissions:
       contents: read
       id-token: write
 
     env:
       # ---- AWS credentials ----
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: us-east-1
-
-      # ---- Azure credentials (Service Principal) ----
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # Optional cache to speed up repeated runs
-      - name: Cache Terraform modules and plugins
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.terraform.d/plugin-cache
-            .terraform
-          key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.9.0
-
-      - name: Terraform Init
-        run: terraform init -input=false
-
-      - name: Terraform Validate
-        run: terraform validate
-
-      - name: Terraform Plan
-        run: terraform plan -input=false -out=tfplan
-
-      # optional: upload the plan artifact for visibility
-      - name: Upload plan artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan
-          path: tfplan
-
-      - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: terraform apply -input=false -auto-approve tfplan
+      AWS_ACCESS_KEY_ID: ${{ sec_
