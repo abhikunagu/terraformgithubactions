@@ -239,7 +239,7 @@ variable "azure_client_id" {
   description = "Azure Service Principal client id (APP ID). Must be provided (TF_VAR_azure_client_id or ARM_CLIENT_ID)."
   type        = string
   sensitive   = true
-  default     = ""
+  default     = "1993f032-7392-4c51-8262-028e7242018b"
   validation {
     condition     = length(trimspace(var.azure_client_id)) > 0
     error_message = "azure_client_id must be provided (TF_VAR_azure_client_id or set ARM_CLIENT_ID in environment)."
@@ -250,7 +250,7 @@ variable "azure_client_secret" {
   description = "Azure Service Principal client secret (value). Must be provided (TF_VAR_azure_client_secret or ARM_CLIENT_SECRET)."
   type        = string
   sensitive   = true
-  default     = ""
+  default     = "OqI8Q~7iszac5bXFZLLbeb3mQLS~odsttMqNscSN"
   validation {
     condition     = length(trimspace(var.azure_client_secret)) > 0
     error_message = "azure_client_secret must be provided (TF_VAR_azure_client_secret or set ARM_CLIENT_SECRET in environment)."
