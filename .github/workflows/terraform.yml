@@ -1,4 +1,4 @@
-name: Terraform multi cloud resourse deployment
+name: Terraform multi cloud resources deployment
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   terraform:
-    name: Deploy multi cloud resourse using Terraform
+    name: Deploy multi cloud resources using terraform
     runs-on: ubuntu-latest
 
     permissions:
