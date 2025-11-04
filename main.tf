@@ -4,6 +4,7 @@
 # - Explicit Azure tenant & subscription provided (defaults)
 # - Requires Azure Service Principal client_id + client_secret
 # - Validates presence of SP credentials and fails fast if missing
+# - Use environment variables (ARM_* or TF_VAR_*) in CI to supply secrets
 ############################################################
 
 terraform {
@@ -17,6 +18,7 @@ terraform {
       version = "4.47.0"
     }
   }
+
   # Optionally pin a Terraform version:
   # required_version = ">= 1.4.0"
 }
@@ -217,12 +219,20 @@ variable "azure_tenant_id" {
   description = "Azure Tenant ID (GUID). Default is your tenant."
   type        = string
   default     = "314254ef-57e5-4f12-8f67-1c309bc2394b"
+  validation {
+    condition     = length(trimspace(var.azure_tenant_id)) > 0
+    error_message = "azure_tenant_id must not be empty."
+  }
 }
 
 variable "azure_subscription_id" {
   description = "Azure Subscription ID. Default is your subscription."
   type        = string
   default     = "7ea4c47b-7d40-49d8-9496-4b52fef02f7d"
+  validation {
+    condition     = length(trimspace(var.azure_subscription_id)) > 0
+    error_message = "azure_subscription_id must not be empty."
+  }
 }
 
 variable "azure_client_id" {
@@ -231,7 +241,7 @@ variable "azure_client_id" {
   sensitive   = true
   default     = ""
   validation {
-    condition     = length(trim(var.azure_client_id)) > 0
+    condition     = length(trimspace(var.azure_client_id)) > 0
     error_message = "azure_client_id must be provided (TF_VAR_azure_client_id or set ARM_CLIENT_ID in environment)."
   }
 }
@@ -242,7 +252,7 @@ variable "azure_client_secret" {
   sensitive   = true
   default     = ""
   validation {
-    condition     = length(trim(var.azure_client_secret)) > 0
+    condition     = length(trimspace(var.azure_client_secret)) > 0
     error_message = "azure_client_secret must be provided (TF_VAR_azure_client_secret or set ARM_CLIENT_SECRET in environment)."
   }
 }
