@@ -16,20 +16,12 @@ jobs:
       id-token: write
 
     env:
-      # AWS (must be set in repo secrets)
+      # default AWS region (AWS creds come from secrets below)
       AWS_DEFAULT_REGION: us-east-1
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      # --- Optional: Login to Azure with AZURE_CREDENTIALS JSON (recommended) ---
-      # Create secret AZURE_CREDENTIALS containing az ad sp create-for-rbac --sdk-auth JSON.
-      - name: Azure Login (optional but recommended)
-        if: ${{ secrets.AZURE_CREDENTIALS != '' }}
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       # Export ARM_* and TF_VAR_* so Terraform validation sees values.
       - name: Export Azure & Terraform variables to environment
@@ -41,7 +33,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         run: |
-          # Export ARM_* for Azure provider
+          # Export ARM_* for the Azure provider
           if [ -n "${AZURE_CLIENT_ID:-}" ]; then echo "ARM_CLIENT_ID=$AZURE_CLIENT_ID" >> $GITHUB_ENV; fi
           if [ -n "${AZURE_CLIENT_SECRET:-}" ]; then echo "ARM_CLIENT_SECRET=$AZURE_CLIENT_SECRET" >> $GITHUB_ENV; fi
           if [ -n "${AZURE_TENANT_ID:-}" ]; then echo "ARM_TENANT_ID=$AZURE_TENANT_ID" >> $GITHUB_ENV; fi
