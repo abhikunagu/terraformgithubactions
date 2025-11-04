@@ -1,12 +1,8 @@
 ############################################################
 # main.tf
-# Combined AWS + Azure example. Use environment variables
-# (ARM_*/AZURE_*) or terraform variables (TF_VAR_*) in CI.
-#
-# Recommended for CI:
-# - Create an Azure service principal and set ARM_CLIENT_ID,
-#   ARM_CLIENT_SECRET, ARM_TENANT_ID, ARM_SUBSCRIPTION_ID
-# - Or use the azure/login GitHub Action with AZURE_CREDENTIALS
+# Multi-cloud Terraform (AWS + Azure) — explicit Azure SP auth
+# IMPORTANT: do NOT commit real secrets. Set ARM_* env vars or
+# TF_VAR_azure_client_id / TF_VAR_azure_client_secret in CI.
 ############################################################
 
 terraform {
@@ -20,9 +16,6 @@ terraform {
       version = "4.47.0"
     }
   }
-
-  # Optional: lock to a specific Terraform version if you want
-  # required_version = ">= 1.4.0"
 }
 
 ####################
@@ -33,16 +26,19 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Azure provider:
-# - Will use explicit variables if provided, otherwise provider
-#   will fall back to the default Azure auth chain (env vars, managed identity, CLI).
+# Azure provider: explicit tenant & subscription to avoid CLI fallback
 provider "azurerm" {
   features {}
 
-  tenant_id       = var.azure_tenant_id != "" ? var.azure_tenant_id : null
-  subscription_id = var.azure_subscription_id != "" ? var.azure_subscription_id : null
-  client_id       = var.azure_client_id != "" ? var.azure_client_id : null
-  client_secret   = var.azure_client_secret != "" ? var.azure_client_secret : null
+  # hard-coded tenant + subscription (use your tenant/sub as requested)
+  tenant_id       = "314254ef-57e5-4f12-8f67-1c309bc2394b"
+  subscription_id = "7ea4c47b-7d40-49d8-9496-4b52fef02f7d"
+
+  # Prefer explicit SP credentials (set them via environment variables
+  # or via TF variables for CI). If these are left empty, provider will
+  # attempt other auth methods (including az cli).
+  client_id     = var.azure_client_id != "" ? var.azure_client_id : null
+  client_secret = var.azure_client_secret != "" ? var.azure_client_secret : null
 }
 
 ####################
@@ -63,12 +59,11 @@ resource "aws_instance" "devops_server" {
   count         = 1
 
   tags = {
-    Name = "DEVOPS"
+    Name        = "DEVOPS"
     Environment = "Dev"
   }
 }
 
-# AWS ECR Repository
 resource "aws_ecr_repository" "devops_ecr" {
   name                 = "devops-ecr-repo1"
   image_tag_mutability = "MUTABLE"
@@ -78,7 +73,6 @@ resource "aws_ecr_repository" "devops_ecr" {
   }
 }
 
-# AWS S3 Bucket
 resource "aws_s3_bucket" "devuserbucket" {
   bucket = var.aws_s3_bucket_name
 
@@ -112,7 +106,6 @@ resource "azurerm_virtual_network" "devops_vnet" {
   }
 }
 
-# Subnet
 resource "azurerm_subnet" "devops_subnet" {
   name                 = "devops-subnet"
   resource_group_name  = azurerm_resource_group.devops_rg.name
@@ -120,7 +113,6 @@ resource "azurerm_subnet" "devops_subnet" {
   address_prefixes     = ["10.1.1.0/24"]
 }
 
-# Network Interface (private IP only)
 resource "azurerm_network_interface" "devops_nic" {
   name                = "devops-nic"
   location            = azurerm_resource_group.devops_rg.location
@@ -137,7 +129,6 @@ resource "azurerm_network_interface" "devops_nic" {
   }
 }
 
-# Linux Virtual Machine
 resource "azurerm_linux_virtual_machine" "devops_vm" {
   name                = "devops-vm"
   resource_group_name = azurerm_resource_group.devops_rg.name
@@ -168,7 +159,6 @@ resource "azurerm_linux_virtual_machine" "devops_vm" {
   }
 }
 
-# Azure Container Registry (ACR)
 resource "azurerm_container_registry" "devops_acr" {
   name                = var.azure_acr_name
   resource_group_name = azurerm_resource_group.devops_rg.name
@@ -181,7 +171,6 @@ resource "azurerm_container_registry" "devops_acr" {
   }
 }
 
-# Azure Storage Account
 resource "azurerm_storage_account" "devops_sa" {
   name                     = var.azure_storage_account_name
   resource_group_name      = azurerm_resource_group.devops_rg.name
@@ -195,7 +184,7 @@ resource "azurerm_storage_account" "devops_sa" {
 }
 
 ####################
-# Variables (can be set via TF_VAR_* or environment-backed workspace variables)
+# Variables
 ####################
 
 variable "aws_region" {
@@ -222,28 +211,16 @@ variable "aws_s3_bucket_name" {
   default     = "my-tf-test-bucketnewone1"
 }
 
-# Azure auth variables (optional — prefer env vars in CI)
-variable "azure_tenant_id" {
-  description = "Azure Tenant ID (GUID). Prefer to provide via ARM_TENANT_ID in CI."
-  type        = string
-  default     = ""
-}
-
-variable "azure_subscription_id" {
-  description = "Azure Subscription ID. Prefer to provide via ARM_SUBSCRIPTION_ID in CI."
-  type        = string
-  default     = ""
-}
-
+# Azure SP auth variables (prefer setting via environment variables in CI)
 variable "azure_client_id" {
-  description = "Azure Service Principal client id (APP ID). Prefer ARM_CLIENT_ID in CI."
+  description = "Azure Service Principal client id (APP ID). Prefer setting ARM_CLIENT_ID env var instead."
   type        = string
   default     = ""
   sensitive   = true
 }
 
 variable "azure_client_secret" {
-  description = "Azure Service Principal client secret. Prefer ARM_CLIENT_SECRET in CI."
+  description = "Azure Service Principal client secret. Prefer setting ARM_CLIENT_SECRET env var instead."
   type        = string
   default     = ""
   sensitive   = true
@@ -256,7 +233,7 @@ variable "azure_location" {
 }
 
 variable "azure_vm_admin_password" {
-  description = "Admin password for Azure VM. For demo only — use Key Vault in prod."
+  description = "Admin password for Azure VM. For demo only — use Key Vault in production."
   type        = string
   default     = "P@ssword123!"
   sensitive   = true
@@ -275,8 +252,9 @@ variable "azure_storage_account_name" {
 }
 
 ####################
-# Outputs (optional)
+# Outputs
 ####################
+
 output "aws_instance_public_ids" {
   value       = aws_instance.devops_server[*].id
   description = "IDs of aws instances created"
