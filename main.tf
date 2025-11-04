@@ -1,8 +1,9 @@
 ############################################################
 # main.tf
-# Multi-cloud Terraform (AWS + Azure) — explicit Azure SP auth
-# IMPORTANT: do NOT commit real secrets. Set ARM_* env vars or
-# TF_VAR_azure_client_id / TF_VAR_azure_client_secret in CI.
+# Multi-cloud Terraform (AWS + Azure)
+# - Explicit Azure tenant & subscription provided (defaults)
+# - Requires Azure Service Principal client_id + client_secret
+# - Validates presence of SP credentials and fails fast if missing
 ############################################################
 
 terraform {
@@ -16,34 +17,33 @@ terraform {
       version = "4.47.0"
     }
   }
+  # Optionally pin a Terraform version:
+  # required_version = ">= 1.4.0"
 }
 
-####################
+################################
 # Providers
-####################
-
+################################
 provider "aws" {
   region = var.aws_region
 }
 
-# Azure provider: explicit tenant & subscription to avoid CLI fallback
+# Azure provider: tenant and subscription are provided (defaults set).
+# Client credentials must be provided via variables or TF_VAR_* env.
 provider "azurerm" {
   features {}
 
-  # hard-coded tenant + subscription (use your tenant/sub as requested)
-  tenant_id       = "314254ef-57e5-4f12-8f67-1c309bc2394b"
-  subscription_id = "7ea4c47b-7d40-49d8-9496-4b52fef02f7d"
+  tenant_id       = var.azure_tenant_id
+  subscription_id = var.azure_subscription_id
 
-  # Prefer explicit SP credentials (set them via environment variables
-  # or via TF variables for CI). If these are left empty, provider will
-  # attempt other auth methods (including az cli).
-  client_id     = var.azure_client_id != "" ? var.azure_client_id : null
-  client_secret = var.azure_client_secret != "" ? var.azure_client_secret : null
+  # Provide client credentials explicitly (prevents CLI fallback).
+  client_id     = var.azure_client_id
+  client_secret = var.azure_client_secret
 }
 
-####################
+################################
 # AWS Resources
-####################
+################################
 
 resource "aws_vpc" "this" {
   cidr_block = "10.31.0.0/16"
@@ -82,9 +82,9 @@ resource "aws_s3_bucket" "devuserbucket" {
   }
 }
 
-####################
+################################
 # Azure Resources
-####################
+################################
 
 resource "azurerm_resource_group" "devops_rg" {
   name     = "rg-terraform-demo2"
@@ -183,9 +183,9 @@ resource "azurerm_storage_account" "devops_sa" {
   }
 }
 
-####################
-# Variables
-####################
+################################
+# Variables (with validation for Azure SP creds)
+################################
 
 variable "aws_region" {
   description = "AWS region"
@@ -211,19 +211,40 @@ variable "aws_s3_bucket_name" {
   default     = "my-tf-test-bucketnewone1"
 }
 
-# Azure SP auth variables (prefer setting via environment variables in CI)
-variable "azure_client_id" {
-  description = "Azure Service Principal client id (APP ID). Prefer setting ARM_CLIENT_ID env var instead."
+# NOTE: tenant_id and subscription_id default to the IDs you provided.
+# You may override them with TF_VAR_* or ARM_* env vars if needed.
+variable "azure_tenant_id" {
+  description = "Azure Tenant ID (GUID). Default is your tenant."
   type        = string
-  default     = ""
+  default     = "314254ef-57e5-4f12-8f67-1c309bc2394b"
+}
+
+variable "azure_subscription_id" {
+  description = "Azure Subscription ID. Default is your subscription."
+  type        = string
+  default     = "7ea4c47b-7d40-49d8-9496-4b52fef02f7d"
+}
+
+variable "azure_client_id" {
+  description = "Azure Service Principal client id (APP ID). Must be provided (TF_VAR_azure_client_id or ARM_CLIENT_ID)."
+  type        = string
   sensitive   = true
+  default     = ""
+  validation {
+    condition     = length(trim(var.azure_client_id)) > 0
+    error_message = "azure_client_id must be provided (TF_VAR_azure_client_id or set ARM_CLIENT_ID in environment)."
+  }
 }
 
 variable "azure_client_secret" {
-  description = "Azure Service Principal client secret. Prefer setting ARM_CLIENT_SECRET env var instead."
+  description = "Azure Service Principal client secret (value). Must be provided (TF_VAR_azure_client_secret or ARM_CLIENT_SECRET)."
   type        = string
-  default     = ""
   sensitive   = true
+  default     = ""
+  validation {
+    condition     = length(trim(var.azure_client_secret)) > 0
+    error_message = "azure_client_secret must be provided (TF_VAR_azure_client_secret or set ARM_CLIENT_SECRET in environment)."
+  }
 }
 
 variable "azure_location" {
@@ -235,8 +256,8 @@ variable "azure_location" {
 variable "azure_vm_admin_password" {
   description = "Admin password for Azure VM. For demo only — use Key Vault in production."
   type        = string
-  default     = "P@ssword123!"
   sensitive   = true
+  default     = "P@ssword123!"
 }
 
 variable "azure_acr_name" {
@@ -251,9 +272,9 @@ variable "azure_storage_account_name" {
   default     = "devopsstorage123456"
 }
 
-####################
+################################
 # Outputs
-####################
+################################
 
 output "aws_instance_public_ids" {
   value       = aws_instance.devops_server[*].id
