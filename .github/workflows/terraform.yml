@@ -11,56 +11,67 @@ jobs:
     name: Deploy multi cloud resources using terraform
     runs-on: ubuntu-latest
 
-    # Required for OIDC-based authentication or future extensions
     permissions:
       contents: read
       id-token: write
 
     env:
-      # ---- AWS credentials ----
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # AWS (must be set in repo secrets)
       AWS_DEFAULT_REGION: us-east-1
-
-      # ---- Azure credentials (Service Principal) ----
-      ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-      ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-      ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Optional cache to speed up repeated runs
-      - name: Cache Terraform modules and plugins
-        uses: actions/cache@v4
+      # --- Optional: Login to Azure with AZURE_CREDENTIALS JSON (recommended) ---
+      # Create secret AZURE_CREDENTIALS containing az ad sp create-for-rbac --sdk-auth JSON.
+      - name: Azure Login (optional but recommended)
+        if: ${{ secrets.AZURE_CREDENTIALS != '' }}
+        uses: azure/login@v1
         with:
-          path: |
-            ~/.terraform.d/plugin-cache
-            .terraform
-          key: ${{ runner.os }}-terraform-${{ hashFiles('**/.terraform.lock.hcl') }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Export ARM_* and TF_VAR_* so Terraform validation sees values.
+      - name: Export Azure & Terraform variables to environment
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          # Export ARM_* for Azure provider
+          if [ -n "${AZURE_CLIENT_ID:-}" ]; then echo "ARM_CLIENT_ID=$AZURE_CLIENT_ID" >> $GITHUB_ENV; fi
+          if [ -n "${AZURE_CLIENT_SECRET:-}" ]; then echo "ARM_CLIENT_SECRET=$AZURE_CLIENT_SECRET" >> $GITHUB_ENV; fi
+          if [ -n "${AZURE_TENANT_ID:-}" ]; then echo "ARM_TENANT_ID=$AZURE_TENANT_ID" >> $GITHUB_ENV; fi
+          if [ -n "${AZURE_SUBSCRIPTION_ID:-}" ]; then echo "ARM_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID" >> $GITHUB_ENV; fi
+
+          # Export TF_VAR_* so Terraform variable validation picks them up
+          if [ -n "${AZURE_CLIENT_ID:-}" ]; then echo "TF_VAR_azure_client_id=$AZURE_CLIENT_ID" >> $GITHUB_ENV; fi
+          if [ -n "${AZURE_CLIENT_SECRET:-}" ]; then echo "TF_VAR_azure_client_secret=$AZURE_CLIENT_SECRET" >> $GITHUB_ENV; fi
+          if [ -n "${AZURE_TENANT_ID:-}" ]; then echo "TF_VAR_azure_tenant_id=$AZURE_TENANT_ID" >> $GITHUB_ENV; fi
+          if [ -n "${AZURE_SUBSCRIPTION_ID:-}" ]; then echo "TF_VAR_azure_subscription_id=$AZURE_SUBSCRIPTION_ID" >> $GITHUB_ENV; fi
+
+          # Export AWS creds
+          if [ -n "${AWS_ACCESS_KEY_ID:-}" ]; then echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV; fi
+          if [ -n "${AWS_SECRET_ACCESS_KEY:-}" ]; then echo "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV; fi
+
+          echo "✅ Exported ARM_* and TF_VAR_* (values not printed for security)."
+
+      - name: Debug: show presence of required vars (safe)
+        run: |
+          echo "ARM_CLIENT_ID=${ARM_CLIENT_ID:+set}"
+          echo "ARM_TENANT_ID=${ARM_TENANT_ID:+set}"
+          echo "ARM_SUBSCRIPTION_ID=${ARM_SUBSCRIPTION_ID:+set}"
+          if [ -z "${ARM_CLIENT_SECRET:-}" ]; then echo "ARM_CLIENT_SECRET is unset"; else echo "ARM_CLIENT_SECRET is set"; fi
+          echo "TF_VAR_azure_client_id=${TF_VAR_azure_client_id:+set}"
+          echo "TF_VAR_azure_client_secret=${TF_VAR_azure_client_secret:+set}"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.9.0
-
-      # ✅ Ensure ARM_* env vars are available for Terraform provider
-      - name: Export ARM_* env vars for Terraform
-        run: |
-          echo "ARM_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
-          echo "ARM_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}" >> $GITHUB_ENV
-          echo "ARM_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
-          echo "ARM_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
-          echo "✅ Azure ARM_* environment variables exported."
-
-      - name: Verify Azure environment variables
-        run: |
-          echo "ARM_CLIENT_ID=${ARM_CLIENT_ID:-unset}"
-          echo "ARM_TENANT_ID=${ARM_TENANT_ID:-unset}"
-          echo "ARM_SUBSCRIPTION_ID=${ARM_SUBSCRIPTION_ID:-unset}"
-          if [ -z "$ARM_CLIENT_SECRET" ]; then echo "ARM_CLIENT_SECRET is unset ❌"; else echo "ARM_CLIENT_SECRET is set ✅"; fi
 
       - name: Terraform Init
         run: terraform init -input=false
@@ -71,7 +82,6 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -input=false -out=tfplan
 
-      # Optional: upload the plan artifact for visibility
       - name: Upload plan artifact
         uses: actions/upload-artifact@v4
         with:
