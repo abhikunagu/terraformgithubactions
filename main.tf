@@ -4,7 +4,11 @@ terraform {
      source  = "hashicorp/aws"
      version = "5.50.0"
    }
-  
+   azurerm = {
+       source  = "hashicorp/azurerm"
+       version = "4.47.0"   # pick latest stable
+
+    }
   }
 }
 
@@ -44,6 +48,15 @@ resource "aws_s3_bucket" "devuserbucket01" {
     Name        = "My bucket"
     Environment = "Dev"
   }
+}
+##############################################################################################
+provider "azurerm" {
+  features {}
+}
+#
+resource "azurerm_resource_group" "devops_rg" {
+  name     = "rg-terraform-demo2"
+  location = "East US"
 }
 
 
