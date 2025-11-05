@@ -38,7 +38,7 @@ resource "aws_ecr_repository" "devops_ecr" {
 
 # AWS S3 Bucket
 resource "aws_s3_bucket" "devuserbucket01" {
-  bucket = "my-tf-test-bucketnewone1"
+  bucket = "my-tf-test-bucketnewone007"
 
   tags = {
     Name        = "My bucket"
