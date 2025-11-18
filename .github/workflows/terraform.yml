@@ -9,15 +9,14 @@ on:
 jobs:
   terraform:
     name: Deploy multi cloud resourse using Terraform
-    runs-on: ubuntu-latest
+
+    # Use your self-hosted runner instead of ubuntu-latest
+    runs-on: [self-hosted, Linux, X64]
 
     permissions:
       contents: read
       id-token: write
-      
-      
-    
-    
+
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -25,7 +24,7 @@ jobs:
       ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
       ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
       ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }} 
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     steps:
       - name: Checkout repository
@@ -43,7 +42,7 @@ jobs:
         run: terraform validate
 
       - name: Terraform Plan
-        run: terraform plan 
+        run: terraform plan
 
-      - name: Terraform approve
+      - name: Terraform Apply
         run: terraform apply -auto-approve
